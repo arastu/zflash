@@ -9,7 +9,7 @@
 #   source /path/to/zflash/zflash.zsh
 #   zflash boot ~/.config/zflash/plugins.zsh
 
-typeset -g ZFLASH_VERSION=0.1.0
+typeset -g ZFLASH_VERSION=0.2.0
 typeset -g ZFLASH_SRC=${${(%):-%x}:A:h}
 : ${ZFLASH_HOME:=${XDG_DATA_HOME:-$HOME/.local/share}/zflash}
 : ${ZFLASH_CACHE:=${XDG_CACHE_HOME:-$HOME/.cache}/zflash}

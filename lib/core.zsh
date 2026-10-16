@@ -5,13 +5,17 @@ typeset -g ZFLASH_REPOS=$ZFLASH_HOME/repos
 typeset -g ZFLASH_MANIFEST=$ZFLASH_CACHE/manifest
 : ${ZFLASH_GIT_HOST:=https://github.com}   # owner/repo specs are cloned from here
 : ${ZFLASH_AUTO_UPDATE:=7}                 # days between background updates; 0 = off
-: ${ZFLASH_COMPINIT:=1}                    # run compinit (cached) after the fpath block
+: ${ZFLASH_COMPINIT:=defer}                # defer (after the first prompt) · sync · 0
 : ${ZFLASH_COMPINIT_TTL:=24}               # hours to trust the compdump before a full rescan
+[[ $ZFLASH_COMPINIT == 1 ]] && ZFLASH_COMPINIT=sync
 typeset -ga ZFLASH_OMZ_LIB_SKIP
 (( $#ZFLASH_OMZ_LIB_SKIP )) || ZFLASH_OMZ_LIB_SKIP=(compfix cli diagnostics)
 
 # build state
-typeset -ga _zflash_fpath _zflash_sync _zflash_defer _zflash_repos
+#   _zflash_sync / _zflash_defer hold items in spec order:
+#     f:<file>   a file to source
+#     e:<n>      snippet n: the output of _zflash_eval_cmd[n], inlined
+typeset -ga _zflash_fpath _zflash_sync _zflash_defer _zflash_repos _zflash_eval_cmd _zflash_eval_out
 typeset -g  _zflash_building=0 _zflash_errors=0 _zflash_omz=
 
 # ── output ───────────────────────────────────────────────────────────────────
@@ -37,10 +41,11 @@ zflash::main() {
   case $cmd in
     build|update|list|clean|reset|bench|help|version)
       zflash::$cmd "$@" ;;
-    load|defer|fpath)
+    load|defer|fpath|eval)
       (( _zflash_building )) || {
         zflash::err "'zflash $cmd' belongs in the spec file (see 'zflash help')"; return 1 }
-      zflash::spec::add ${${cmd/load/sync}} "$@" ;;
+      if [[ $cmd == eval ]]; then zflash::spec::eval "$@"
+      else zflash::spec::add ${${cmd/load/sync}} "$@"; fi ;;
     '') zflash::help ;;
     *)  zflash::err "unknown command '$cmd'"; zflash::help >&2; return 1 ;;
   esac
@@ -104,15 +109,25 @@ zflash::add_fpath_dir() {  # <dir> [force]
   return 0
 }
 
-# ── spec verbs: load / defer / fpath ─────────────────────────────────────────
+# ── spec verbs: load / defer / fpath / eval ──────────────────────────────────
 
 zflash::spec::add() {  # <sync|defer|fpath> <repo> [path...]
   local stage=$1 spec=$2; shift 2
   local dir name url sub target file force=
   zflash::repo "$spec" || return 1
   dir=$REPLY name=$reply[1] url=$reply[2]
-  [[ -n $url ]] && { zflash::clone "$dir" "$url" "$name" || return 1 }
-  (( ${_zflash_repos[(Ie)$dir]} )) || _zflash_repos+=($dir)
+  if [[ -n $url ]]; then
+    zflash::clone "$dir" "$url" "$name" || return 1
+    (( ${_zflash_repos[(Ie)$dir]} )) || _zflash_repos+=($dir)
+  fi
+
+  # a single local file, e.g. `zflash defer ~/.zsh/aliases`
+  if [[ -f $dir ]]; then
+    [[ $stage == fpath ]] && { zflash::err "'zflash fpath $spec': not a directory"; return 1 }
+    (( $# )) && { zflash::err "'zflash $stage $spec': paths only apply to directories"; return 1 }
+    zflash::spec::item $stage "f:$dir"
+    return
+  fi
 
   if [[ -f $dir/oh-my-zsh.sh && $# -eq 0 ]]; then
     [[ $stage == fpath ]] && { zflash::err "'zflash fpath $spec' needs plugin paths"; return 1 }
@@ -136,20 +151,42 @@ zflash::spec::add() {  # <sync|defer|fpath> <repo> [path...]
       zflash::err "not found: $target"; return 1
     fi
     [[ $stage == fpath ]] && continue
-    if [[ $stage == sync ]]; then _zflash_sync+=($file); else _zflash_defer+=($file); fi
+    zflash::spec::item $stage "f:$file"
   done
 }
 
-# `zflash load ohmyzsh/ohmyzsh` (any checkout containing oh-my-zsh.sh) with no
-# path: the framework base (lib/*.zsh).
+zflash::spec::item() {  # <sync|defer> <item>
+  if [[ $1 == sync ]]; then _zflash_sync+=($2); else _zflash_defer+=($2); fi
+}
+
+# `zflash eval [--defer] '<command>'`: run the command now, at build time, and
+# inline its output into the init. For `<tool> init zsh`-style integrations
+# (starship, zoxide, direnv, fzf --zsh …) this replaces a fork on every start
+# with byte-compiled text. Re-run `zflash build` after upgrading the tool.
+zflash::spec::eval() {
+  local stage=sync
+  [[ $1 == --defer ]] && { stage=defer; shift }
+  (( $# == 1 )) || { zflash::err "'zflash eval' takes one quoted command (see 'zflash help')"; return 1 }
+  local out
+  out=$(eval "$1") || { zflash::err "eval failed (exit $?): $1"; return 1 }
+  [[ -n $out ]] || { zflash::err "eval produced no output: $1"; return 1 }
+  _zflash_eval_cmd+=("$1"); _zflash_eval_out+=("$out")
+  zflash::spec::item $stage "e:$#_zflash_eval_cmd"
+}
+
+# `zflash load|defer ohmyzsh/ohmyzsh` (any checkout containing oh-my-zsh.sh)
+# with no path: the framework base (lib/*.zsh).
 # oh-my-zsh.sh itself is not sourced; it would run its own compinit and update
 # checker. Its environment is recreated in the generated init instead.
+# lib/history.zsh is always loaded before the first prompt: zsh reads the
+# history file right after .zshrc, so HISTFILE cannot wait.
 zflash::omz_base() {  # <dir> <stage>
-  local dir=$1 stage=$2 f
+  local dir=$1 stage=$2 f s
   _zflash_omz=$dir
   for f in $dir/lib/*.zsh(N); do
     (( ${ZFLASH_OMZ_LIB_SKIP[(Ie)${f:t:r}]} )) && continue
-    if [[ $stage == sync ]]; then _zflash_sync+=($f); else _zflash_defer+=($f); fi
+    s=$stage; [[ ${f:t} == history.zsh ]] && s=sync
+    zflash::spec::item $s "f:$f"
   done
   zflash::add_fpath $dir/{functions,completions}(N/) $dir/custom/{functions,completions}(N/)
 }
@@ -161,7 +198,8 @@ zflash::build() {
   [[ -r $ZFLASH_SPEC ]] || { zflash::err "cannot read spec: $ZFLASH_SPEC"; return 1 }
   command mkdir -p -- "$ZFLASH_CACHE" "$ZFLASH_REPOS" || return 1
 
-  _zflash_fpath=() _zflash_sync=() _zflash_defer=() _zflash_repos=() _zflash_omz= _zflash_errors=0
+  _zflash_fpath=() _zflash_sync=() _zflash_defer=() _zflash_repos=() _zflash_eval_cmd=() _zflash_eval_out=()
+  _zflash_omz= _zflash_errors=0
   _zflash_building=1
   source "$ZFLASH_SPEC"
   _zflash_building=0
@@ -175,6 +213,8 @@ zflash::build() {
     defer_init=$REPLY/zsh-defer.plugin.zsh
     (( ${_zflash_repos[(Ie)$REPLY]} )) || _zflash_repos+=($REPLY)
   fi
+  local compinit=$ZFLASH_COMPINIT
+  [[ $compinit == defer && -z $defer_init ]] && compinit=sync
 
   local tmp=$ZFLASH_INIT.$$ f now
   zmodload -F zsh/datetime b:strftime p:EPOCHSECONDS
@@ -199,14 +239,18 @@ zflash::build() {
       print -r -- "fpath=($fp \$fpath)"
       print
     fi
-    (( ZFLASH_COMPINIT )) && zflash::emit_compinit
+    case $compinit in
+      sync)  zflash::emit_compinit ;;
+      defer) zflash::emit_compdef_queue ;;
+    esac
     print -r -- '# ── stage 1: before the first prompt ──'
-    for f in $_zflash_sync; do print -r -- "source ${(q)f}"; done
+    for f in $_zflash_sync; do zflash::emit_item sync "$f"; done
     if [[ -n $defer_init ]]; then
       print
       print -r -- '# ── stage 2: after the first prompt, via romkatv/zsh-defer ──'
       print -r -- "source ${(q)defer_init}"
-      for f in $_zflash_defer; do print -r -- "zsh-defer source ${(q)f}"; done
+      [[ $compinit == defer ]] && zflash::emit_compinit_deferred
+      for f in $_zflash_defer; do zflash::emit_item defer "$f"; done
       zflash::emit_autoupdate
     fi
   } >| "$tmp" || { command rm -f -- "$tmp"; return 1 }
@@ -214,29 +258,61 @@ zflash::build() {
 
   {
     for f in $_zflash_fpath; do print -r -- "fpath"$'\t'"$f"; done
-    for f in $_zflash_sync;  do print -r -- "sync"$'\t'"$f";  done
-    for f in $_zflash_defer; do print -r -- "defer"$'\t'"$f"; done
+    for f in $_zflash_sync;  do print -r -- "sync"$'\t'"$(zflash::item_label "$f")";  done
+    for f in $_zflash_defer; do print -r -- "defer"$'\t'"$(zflash::item_label "$f")"; done
     for f in $_zflash_repos; do print -r -- "repo"$'\t'"$f";  done
   } >| "$ZFLASH_MANIFEST"
 
   # A fresh build counts as "just updated" for the background updater.
   command touch -- "$ZFLASH_CACHE/last-update"
-  zflash::compile "$ZFLASH_INIT" $_zflash_sync $_zflash_defer $defer_init
-  zflash::log "built ${ZFLASH_INIT/#$HOME/~}: $#_zflash_sync sync, $#_zflash_defer deferred, $#_zflash_fpath completion dirs"
+  zflash::compile "$ZFLASH_INIT"
+  zflash::compile_repos $defer_init ${${(M)_zflash_sync:#f:*}#f:} ${${(M)_zflash_defer:#f:*}#f:}
+  zflash::log "built ${ZFLASH_INIT/#$HOME/~}: $#_zflash_sync sync, $#_zflash_defer deferred, $#_zflash_eval_cmd snippets, $#_zflash_fpath completion dirs"
 }
 
-zflash::emit_compinit() {
-  print -r -- "typeset -g _zflash_compinit_ttl=$ZFLASH_COMPINIT_TTL"
+zflash::item_label() {  # <item> → "<path>" or "$ <command>"
+  case $1 in
+    f:*) print -r -- "${1#f:}" ;;
+    e:*) print -r -- "\$ ${_zflash_eval_cmd[${1#e:}]}" ;;
+  esac
+}
+
+# Emit one item. Repo files are byte-compiled at build time. A local file
+# (your own rc files) is compiled on the fly when it is newer than its .zwc,
+# so edits always take effect.
+zflash::emit_item() {  # <sync|defer> <item>
+  local stage=$1 item=$2 f n cmd
+  case $item in
+    f:*)
+      f=${item#f:}
+      if [[ $f == $ZFLASH_REPOS/* ]]; then
+        cmd="source ${(q)f}"
+      else
+        cmd="[[ ${(q)f}.zwc -nt ${(q)f} ]] || zcompile -- ${(q)f} 2>/dev/null; source ${(q)f}"
+      fi
+      if [[ $stage == sync ]]; then print -r -- "$cmd"
+      else print -r -- "zsh-defer -c ${(qq)cmd}"; fi ;;
+    e:*)
+      n=${item#e:}
+      print -r -- "# \$ ${_zflash_eval_cmd[n]}"
+      if [[ $stage == sync ]]; then print -r -- "${_zflash_eval_out[n]}"
+      else print -r -- "zsh-defer -c ${(qq)_zflash_eval_out[n]}"; fi ;;
+  esac
+}
+
+# The cached compinit block (used inline for sync, inside a function for defer).
+zflash::emit_compinit_body() {
+  print -r -- "  local dump=\${ZFLASH_COMPDUMP:-\$ZFLASH_CACHE/compdump-\$ZSH_VERSION} ttl=$ZFLASH_COMPINIT_TTL"
   cat <<'ZEOF'
-# ── compinit, cached ──
-# The dump is trusted (-C: no fpath rescan, no compaudit) while fpath is
-# unchanged and the dump is younger than the TTL. Otherwise a full compinit
-# runs and the dump is re-signed and byte-compiled.
-autoload -Uz compinit
-() {
-  local dump=${ZFLASH_COMPDUMP:-$ZFLASH_CACHE/compdump-$ZSH_VERSION}
   local sig="$ZSH_VERSION"$'\n'"${(F)fpath}"
-  local -a fresh; fresh=($dump(N.mh-$_zflash_compinit_ttl))
+ZEOF
+  # Generated completions appear in $ZSH_CACHE_DIR/completions over time;
+  # count them so a new file triggers a rescan instead of waiting for the TTL.
+  [[ -n $_zflash_omz ]] && cat <<'ZEOF'
+  local -a gen; gen=($ZSH_CACHE_DIR/completions/_*(N)); sig+=$'\n'$#gen
+ZEOF
+  cat <<'ZEOF'
+  local -a fresh; fresh=($dump(N.mh-$ttl))
   if (( $#fresh )) && [[ -r $dump.sig && "$(<$dump.sig)" == "$sig" ]]; then
     compinit -C -d "$dump"
   else
@@ -245,9 +321,45 @@ autoload -Uz compinit
     command touch -- "$dump"
   fi
   [[ $dump.zwc -nt $dump ]] || zcompile "$dump" 2>/dev/null
+ZEOF
 }
-unset _zflash_compinit_ttl
 
+zflash::emit_compinit() {
+  cat <<'ZEOF'
+# ── compinit, cached ──
+# The dump is trusted (-C: no fpath rescan, no compaudit) while fpath is
+# unchanged and the dump is younger than the TTL. Otherwise a full compinit
+# runs and the dump is re-signed and byte-compiled.
+autoload -Uz compinit
+() {
+ZEOF
+  zflash::emit_compinit_body
+  print -r -- '}'
+  print
+}
+
+zflash::emit_compdef_queue() {
+  cat <<'ZEOF'
+# ── compinit is deferred to stage 2; until then compdef calls are queued ──
+typeset -ga _zflash_compdefs
+compdef() { _zflash_compdefs+=("${(j: :)${(q)@}}") }
+
+ZEOF
+}
+
+zflash::emit_compinit_deferred() {
+  cat <<'ZEOF'
+# cached compinit (see 'zflash help'), then replay the queued compdef calls
+_zflash_compinit() {
+  unfunction compdef
+  autoload -Uz compinit
+ZEOF
+  zflash::emit_compinit_body
+  cat <<'ZEOF'
+  local c; for c in $_zflash_compdefs; do eval "compdef $c"; done
+  unset _zflash_compdefs; unfunction _zflash_compinit
+}
+zsh-defer _zflash_compinit
 ZEOF
 }
 
@@ -275,6 +387,23 @@ zflash::compile() {
     zcompile "$f" 2>/dev/null || zflash::log "could not byte-compile ${f/#$HOME/~}"
   done
   return 0
+}
+
+# Byte-compile every .zsh file in the directories of the given repo files
+# (plugins source helpers next to themselves), skipping test and doc trees.
+zflash::compile_repos() {
+  setopt localoptions extendedglob
+  local f d
+  local -a dirs files
+  for f; do
+    [[ $f == $ZFLASH_REPOS/* ]] || continue
+    files+=($f)
+    d=${f:h}; (( ${dirs[(Ie)$d]} )) || dirs+=($d)
+  done
+  for d in $dirs; do
+    files+=($d/**/*.zsh~*/(test|tests|test-data|spec|docs)/*(N.))
+  done
+  zflash::compile ${(u)files}
 }
 
 # ── commands ─────────────────────────────────────────────────────────────────
@@ -367,10 +496,13 @@ zflash — a fast, staged zsh plugin manager
     zflash load  <repo> [path ...]   source before the first prompt
     zflash defer <repo> [path ...]   source after the first prompt
     zflash fpath <repo> [path ...]   completions only; add dirs to fpath
+    zflash eval [--defer] '<cmd>'    run <cmd> at build time, inline its output
+                                     (starship init zsh, zoxide init zsh, fzf --zsh …)
 
-    <repo>  owner/repo · git URL · local path
+    <repo>  owner/repo · git URL · local path (a directory, or one of your own files)
     [path]  file or directory inside the repo (e.g. plugins/git, lib/git.zsh)
-    `zflash load ohmyzsh/ohmyzsh` with no path loads oh-my-zsh's lib/*.zsh.
+    `zflash load|defer ohmyzsh/ohmyzsh` with no path loads oh-my-zsh's lib/*.zsh
+    (lib/history.zsh is always loaded before the first prompt).
     Completion dirs from every line are hoisted above compinit automatically.
 
   commands
@@ -386,7 +518,8 @@ zflash — a fast, staged zsh plugin manager
     ZFLASH_HOME          repositories      (~/.local/share/zflash)
     ZFLASH_CACHE         init + compdump   (~/.cache/zflash)
     ZFLASH_AUTO_UPDATE   days between background updates, 0 = off (7)
-    ZFLASH_COMPINIT      run cached compinit, 0 = off (1)
+    ZFLASH_COMPINIT      defer = run cached compinit after the first prompt (default),
+                         sync = before it, 0 = don't run compinit
     ZFLASH_COMPINIT_TTL  hours to trust the compdump (24)
     ZFLASH_COMPDUMP      compdump path
     ZFLASH_GIT_HOST      host for owner/repo specs (https://github.com)

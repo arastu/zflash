@@ -54,7 +54,7 @@ fi
 
 command mkdir -p -- "${XDG_CACHE_HOME:-$HOME/.cache}/zflash" "${spec:h}"
 if [[ ! -e $spec ]]; then
-  command cp -- "$src/examples/plugins.zsh" "$spec"
+  command cp -- "$src/examples/starter.zsh" "$spec"
   print -ru2 -- "install: created example spec at $spec"
 fi
 
