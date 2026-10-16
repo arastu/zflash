@@ -32,6 +32,60 @@ oh-my-zsh and third-party plugins, 2 completion-only), measured with
 The full config is in [`examples/`](examples/): [`plugins.zsh`](examples/plugins.zsh)
 is the spec, [`zshrc.zsh`](examples/zshrc.zsh) the part of `.zshrc` that boots it.
 
+## Benchmark
+
+Six plugins (`zsh-completions`, `zsh-autosuggestions`, `zsh-syntax-highlighting`,
+`zsh-history-substring-search`, oh-my-zsh `git` and `extract`) loaded through
+seven setups, each using the manager's documented minimal configuration with
+compinit where the manager's docs put it. Every shell runs with the same
+scrubbed environment and its own `ZDOTDIR` and `HOME`. Each setup is first
+checked, in a real pseudo-terminal, to have loaded all six plugins and
+initialised completions; only then is it timed.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="bench/chart-dark.svg">
+  <img alt="Startup time by plugin manager" src="bench/chart.svg">
+</picture>
+
+| setup | mean | min |
+|---|---:|---:|
+| zsh -f (no rc files at all) | 7.2 ms ± 0.8 | 5.7 ms |
+| zflash, widgets deferred | 25.1 ms ± 0.8 | 23.6 ms |
+| zflash | 32.3 ms ± 0.6 | 31.3 ms |
+| zgenom | 33.3 ms ± 0.8 | 31.2 ms |
+| znap | 39.3 ms ± 0.9 | 37.9 ms |
+| no manager (hand-written) | 44.3 ms ± 1.4 | 42.5 ms |
+| antidote | 45.9 ms ± 0.6 | 45.1 ms |
+| zinit, turbo mode for widgets | 50.5 ms ± 0.7 | 49.3 ms |
+| sheldon | 54.3 ms ± 1.0 | 52.8 ms |
+| zinit | 67.6 ms ± 0.6 | 66.4 ms |
+
+Apple M4, macOS 27.0.1, zsh 5.9 (arm64-apple-darwin26.0), 2026-10-16. hyperfine, 10 setups, `zsh -i -c exit`.
+
+Notes:
+
+- *Deferred* rows load the three widget plugins (highlighting, autosuggestions,
+  history search) after the first prompt: `zflash defer` and zinit's
+  `wait lucid`. The other rows load everything before the prompt.
+- zflash's lead over the hand-written setup comes from its cached compinit and
+  byte-compiled files. The hand-written setup uses a plain `compinit` as most
+  dotfiles do; with `compinit -C` it measures about 38 ms.
+- zgenom uses `zgenom compdef`, antidote two bundle files with compinit between
+  them, and sheldon an inline compinit plugin, because the oh-my-zsh git plugin
+  calls `compdef` when sourced. zinit uses `zinit cdreplay`; znap runs compinit
+  itself.
+- Everything was cloned from local mirrors during setup; this has no effect on
+  startup time.
+
+Reproduce with:
+
+```sh
+zsh bench/run.zsh                       # needs git, hyperfine, python3; sheldon optional
+ZBENCH_RUNS=50 zsh bench/run.zsh        # more runs
+```
+
+It writes `bench/results.json`, `bench/results.md` and the two charts.
+
 ## Install
 
 From a checkout:
