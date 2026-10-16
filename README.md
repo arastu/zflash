@@ -1,6 +1,6 @@
 # zflash
 
-A fast, staged zsh plugin manager.
+A super blazing fast(est), staged zsh plugin manager.
 
 zflash compiles a short declarative plugin list into one static, byte-compiled
 init file. At shell start nothing is resolved, searched, or parsed by the
