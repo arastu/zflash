@@ -242,3 +242,7 @@ init file. Work step by step and show me each file before you write it.
    backup is, and what old files (the previous manager's directory, old
    compdump files) can now be deleted. Do not delete them yourself.
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
