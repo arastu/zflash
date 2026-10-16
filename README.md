@@ -2,6 +2,8 @@
 
 A super blazing fast(est), staged zsh plugin manager.
 
+![A new shell, prompt and all, in 7 ms](docs/demo.gif)
+
 zflash compiles a short declarative spec into one static, byte-compiled init
 file. At shell start nothing is resolved, searched, forked or parsed by the
 manager: your `.zshrc` sources a tiny bootstrap and that one file. Everything
