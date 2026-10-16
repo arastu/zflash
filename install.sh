@@ -5,7 +5,7 @@
 #
 # Run from a checkout to use it in place. Run via curl (outside a checkout) to
 # clone zflash into ~/.local/share/zflash/zflash first:
-#   zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)"
+#   zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
 #
 #   --zshrc       append the two bootstrap lines to ~/.zshrc (idempotent)
 #   --spec FILE   spec file to create/use (default ~/.config/zflash/plugins.zsh)
@@ -14,7 +14,21 @@ emulate -L zsh
 setopt err_return
 
 die()   { print -ru2 -- "install: $*"; exit 1 }
-usage() { sed -n '2,11p' "${(%):-%x}" | sed 's/^# \{0,1\}//'; exit 0 }
+usage() {
+  cat <<'USAGE'
+zflash installer
+
+  zsh install.sh [--zshrc] [--spec FILE]
+
+Run from a checkout to use it in place. Run via curl (outside a checkout) to
+clone zflash into ~/.local/share/zflash/zflash first:
+  zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
+
+  --zshrc       append the two bootstrap lines to ~/.zshrc (idempotent)
+  --spec FILE   spec file to create/use (default ~/.config/zflash/plugins.zsh)
+USAGE
+  exit 0
+}
 
 src=${${(%):-%x}:A:h}
 spec=${ZFLASH_SPEC:-${XDG_CONFIG_HOME:-$HOME/.config}/zflash/plugins.zsh}

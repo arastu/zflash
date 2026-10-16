@@ -30,7 +30,7 @@ zsh ~/Workspace/zflash/install.sh --zshrc
 Or in one line, which clones into `~/.local/share/zflash/zflash`:
 
 ```sh
-zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" -- --zshrc
+zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
 ```
 
 This creates an example spec at `~/.config/zflash/plugins.zsh` and appends two
