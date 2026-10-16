@@ -18,6 +18,20 @@ as early as possible.
 | completion dirs | must be declared before compinit by hand | hoisted automatically from every line |
 | updates | at startup, in the foreground | in the background, after the prompt |
 
+## Startup time
+
+Same machine, same plugins (oh-my-zsh's lib, fzf-tab, zsh-completions, 39
+oh-my-zsh and third-party plugins, 2 completion-only), measured with
+`hyperfine -N 'zsh -i -c exit'` in Ghostty on an Apple Silicon Mac, zsh 5.9:
+
+| setup | startup |
+|---|---|
+| zgenom, the config I used before (everything loaded at startup) | 129 ms |
+| zflash, same plugins, 3 `load` + 39 `defer` | 32 ms |
+
+The full config is in [`examples/`](examples/): [`plugins.zsh`](examples/plugins.zsh)
+is the spec, [`zshrc.zsh`](examples/zshrc.zsh) the part of `.zshrc` that boots it.
+
 ## Install
 
 From a checkout:
@@ -33,8 +47,9 @@ Or in one line, which clones into `~/.local/share/zflash/zflash`:
 zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
 ```
 
-This creates an example spec at `~/.config/zflash/plugins.zsh` and appends two
-lines to `~/.zshrc`:
+This creates a spec at `~/.config/zflash/plugins.zsh` (a copy of
+[`examples/plugins.zsh`](examples/plugins.zsh), trim it to what you use) and
+appends two lines to `~/.zshrc`:
 
 ```zsh
 source $HOME/Workspace/zflash/zflash.zsh
