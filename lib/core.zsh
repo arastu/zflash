@@ -8,6 +8,13 @@ typeset -g ZFLASH_MANIFEST=$ZFLASH_CACHE/manifest
 : ${ZFLASH_COMPINIT:=defer}                # defer (after the first prompt) · sync · 0
 : ${ZFLASH_COMPINIT_TTL:=24}               # hours to trust the compdump before a full rescan
 [[ $ZFLASH_COMPINIT == 1 ]] && ZFLASH_COMPINIT=sync
+# Options for every deferred task. zsh-defer's defaults (12dmszpr) also run
+# all precmd hooks, invalidate autosuggestions/highlighting, `zle reset-prompt`
+# and `zle -R` after *each* task: with a prompt that forks (starship, …) and
+# hooks like mise that is 20–40 ms per task, more than the tasks themselves.
+# Keep -1 -2 (silence) and -d (chpwd hooks, only if the task changed dir); do
+# the rest once, in the flush task emitted after the last deferred item.
+typeset -g ZFLASH_DEFER_OPTS=-mszpr
 typeset -ga ZFLASH_OMZ_LIB_SKIP
 (( $#ZFLASH_OMZ_LIB_SKIP )) || ZFLASH_OMZ_LIB_SKIP=(compfix cli diagnostics)
 
@@ -249,8 +256,10 @@ zflash::build() {
       print
       print -r -- '# ── stage 2: after the first prompt, via romkatv/zsh-defer ──'
       print -r -- "source ${(q)defer_init}"
+      zflash::emit_defer_fix
       [[ $compinit == defer ]] && zflash::emit_compinit_deferred
       for f in $_zflash_defer; do zflash::emit_item defer "$f"; done
+      zflash::emit_defer_flush
       zflash::emit_autoupdate
     fi
   } >| "$tmp" || { command rm -f -- "$tmp"; return 1 }
@@ -291,12 +300,12 @@ zflash::emit_item() {  # <sync|defer> <item>
         cmd="[[ ${(q)f}.zwc -nt ${(q)f} ]] || zcompile -- ${(q)f} 2>/dev/null; source ${(q)f}"
       fi
       if [[ $stage == sync ]]; then print -r -- "$cmd"
-      else print -r -- "zsh-defer -c ${(qq)cmd}"; fi ;;
+      else print -r -- "zsh-defer $ZFLASH_DEFER_OPTS -c ${(qq)cmd}"; fi ;;
     e:*)
       n=${item#e:}
       print -r -- "# \$ ${_zflash_eval_cmd[n]}"
       if [[ $stage == sync ]]; then print -r -- "${_zflash_eval_out[n]}"
-      else print -r -- "zsh-defer -c ${(qq)_zflash_eval_out[n]}"; fi ;;
+      else print -r -- "zsh-defer $ZFLASH_DEFER_OPTS -c ${(qq)_zflash_eval_out[n]}"; fi ;;
   esac
 }
 
@@ -359,8 +368,29 @@ ZEOF
   local c; for c in $_zflash_compdefs; do eval "compdef $c"; done
   unset _zflash_compdefs; unfunction _zflash_compinit
 }
-zsh-defer _zflash_compinit
 ZEOF
+  print -r -- "zsh-defer $ZFLASH_DEFER_OPTS _zflash_compinit"
+}
+
+# zsh-defer registers its fd handler as a plain function (`zle -F fd func`),
+# and zsh exposes none of the zle parameters to a plain function: $PENDING and
+# $KEYS_QUEUED_COUNT read as empty, so its "yield when keys are waiting" check
+# never fires and the whole queue runs before the first keystroke is handled
+# (zsh 5.9: ~1.5 s with 70 tasks). Registered as a widget (`zle -F -w`) the
+# parameters exist and typing interleaves with the queue. No-op once upstream
+# fixes it.
+zflash::emit_defer_fix() {
+  cat <<'ZEOF'
+functions[_zsh-defer-schedule]=${functions[_zsh-defer-schedule]//zle -F \$fd/zle -F -w \$fd}
+ZEOF
+}
+
+# One task with zsh-defer's default actions after everything is loaded: run
+# the precmd hooks, invalidate suggestions/highlighting, redraw the prompt.
+zflash::emit_defer_flush() {
+  print
+  print -r -- '# ── all loaded: precmd hooks, suggestion/highlight reset, prompt redraw, once ──'
+  print -r -- 'zsh-defer :'
 }
 
 zflash::emit_autoupdate() {
@@ -375,8 +405,8 @@ _zflash_autoupdate() {
   command touch -- "$stamp"
   ( zflash update --quiet &>> "$ZFLASH_CACHE/update.log" ) &!
 }
-zsh-defer _zflash_autoupdate
 ZEOF
+  print -r -- "zsh-defer $ZFLASH_DEFER_OPTS _zflash_autoupdate"
 }
 
 zflash::compile() {
