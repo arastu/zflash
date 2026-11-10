@@ -1,0 +1,123 @@
+---
+id: installation
+title: Installation
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+zflash is a git checkout plus two lines in your `~/.zshrc`. The installer script, `install.sh`, does three things:
+
+1. Makes sure a copy of zflash exists (cloning it if needed).
+2. Creates a **spec file** (from the bundled starter) if you don't already have one.
+3. Adds the two **bootstrap lines** to `~/.zshrc`, or prints them for you to add.
+
+## Choose an install method
+
+<Tabs groupId="install-method">
+<TabItem value="curl" label="One-line install" default>
+
+```bash
+zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
+```
+
+When run outside a checkout, the installer clones zflash into:
+
+```text
+~/.local/share/zflash/zflash
+```
+
+To clone somewhere else, set `ZFLASH_INSTALL_DIR`:
+
+```bash
+ZFLASH_INSTALL_DIR=~/src/zflash \
+  zsh -c "$(curl -fsSL https://raw.githubusercontent.com/arastu/zflash/main/install.sh)" zflash-install --zshrc
+```
+
+</TabItem>
+<TabItem value="checkout" label="From a git checkout">
+
+Clone zflash wherever you keep source code and run the installer from it. zflash is used **in place**, so this is the checkout you will `git pull` to upgrade.
+
+```bash
+git clone https://github.com/arastu/zflash ~/Workspace/zflash
+zsh ~/Workspace/zflash/install.sh --zshrc
+```
+
+This is a good choice if you keep your dotfiles in git and want to pin zflash as a submodule, or if you want to read and modify zflash itself.
+
+</TabItem>
+</Tabs>
+
+## Installer options
+
+```text
+zsh install.sh [--zshrc] [--spec FILE]
+```
+
+| Option | Effect |
+|---|---|
+| `--zshrc` | Append the two bootstrap lines to `~/.zshrc`. Safe to repeat: if `~/.zshrc` already contains `zflash boot`, nothing is added. |
+| `--spec FILE` | Spec file to create or use. Default: `~/.config/zflash/plugins.zsh` (or `$XDG_CONFIG_HOME/zflash/plugins.zsh`). |
+| `-h`, `--help` | Show usage. |
+
+The installer also honors these environment variables:
+
+| Variable | Meaning |
+|---|---|
+| `ZFLASH_SPEC` | Default spec path when `--spec` isn't given. |
+| `ZFLASH_INSTALL_DIR` | Where to clone zflash when run via curl. Default `~/.local/share/zflash/zflash`. |
+| `ZFLASH_REPO` | Git URL to clone. Default `https://github.com/arastu/zflash.git`. |
+
+If the spec file already exists, the installer leaves it alone. Otherwise it copies [`examples/starter.zsh`](https://github.com/arastu/zflash/blob/main/examples/starter.zsh) there.
+
+## What gets added to `.zshrc`
+
+With `--zshrc`, these lines are appended to the end of `~/.zshrc` (paths reflect where zflash and your spec live):
+
+```bash title="~/.zshrc"
+# zflash plugin manager
+source $HOME/.local/share/zflash/zflash/zflash.zsh
+zflash boot $HOME/.config/zflash/plugins.zsh
+```
+
+Without `--zshrc`, the installer prints the two lines and you add them yourself. Do that if you manage `.zshrc` by hand or from a dotfiles repo.
+
+:::tip Where to put the lines
+Anything that must exist before plugins load, such as `ZSH_CACHE_DIR` or any [`ZFLASH_*` variable](../configuration/environment-variables.md), goes **above** these two lines. Ideally, the rest of your `.zshrc` moves into the spec. See [Your own files](../plugins/your-own-files.md).
+:::
+
+## First start
+
+Open a new terminal. On the first start zflash:
+
+1. Loads its manager code (`lib/core.zsh`), because no init file exists yet.
+2. Clones every repository in your spec into `~/.local/share/zflash/repos/`.
+3. Writes and byte-compiles `~/.cache/zflash/init.zsh`.
+4. Sources it.
+
+You will see a few `zflash: cloning …` lines and a summary like this (counts depend on your spec):
+
+```text
+zflash: built ~/.cache/zflash/init.zsh: 1 sync, 24 deferred, 0 snippets, 2 completion dirs
+```
+
+Later starts print nothing and only source the compiled init.
+
+## Verify the install
+
+```bash
+zflash version      # zflash 0.2.0
+zflash list         # what the init loads, by stage
+zflash bench        # time zsh -i startup
+```
+
+## Optional: skip macOS global rc files
+
+On macOS, `/etc/zprofile` and `/etc/zshrc` fork processes (`path_helper`, `locale`) on every start, costing about 3 ms. You can skip them with one line in `~/.zshenv`. See [Performance tuning](../guides/performance-tuning.md#macos-skip-the-global-rc-files) before doing this, because you need to move a few settings into your own files.
+
+## Next steps
+
+- [Your first spec](first-spec.md)
+- [Configuration files](../configuration/configuration-files.md): every file zflash reads or writes
+- [Migrating from another plugin manager](../guides/migrating.md)

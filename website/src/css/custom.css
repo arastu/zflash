@@ -1,0 +1,38 @@
+/* zflash docs theme: amber "flash" accent on a neutral base. */
+:root {
+  --ifm-color-primary: #b7791f;
+  --ifm-color-primary-dark: #a56d1c;
+  --ifm-color-primary-darker: #9c671a;
+  --ifm-color-primary-darkest: #805516;
+  --ifm-color-primary-light: #c98522;
+  --ifm-color-primary-lighter: #d28b24;
+  --ifm-color-primary-lightest: #dd9b3a;
+  --ifm-code-font-size: 92%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #f5c542;
+  --ifm-color-primary-dark: #f3bc24;
+  --ifm-color-primary-darker: #f2b815;
+  --ifm-color-primary-darkest: #d39d0b;
+  --ifm-color-primary-light: #f7ce60;
+  --ifm-color-primary-lighter: #f8d26f;
+  --ifm-color-primary-lightest: #fadf9b;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.hero--zflash {
+  background: #1f2335;
+  color: #e6e8f0;
+}
+
+.hero--zflash .hero__title {
+  color: #f5c542;
+}
+
+/* Tables in docs scroll on narrow screens instead of overflowing. */
+.markdown table {
+  display: block;
+  overflow-x: auto;
+}

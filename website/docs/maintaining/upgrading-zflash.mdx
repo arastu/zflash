@@ -1,0 +1,137 @@
+---
+id: upgrading-zflash
+title: Upgrading zflash
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+zflash is a git checkout, so upgrading it is a `git pull`. Neither `zflash update` nor the background updater touches zflash itself; they only update your plugins.
+
+## Check your version
+
+```bash
+zflash version
+```
+
+```text
+zflash 0.2.0
+```
+
+zflash doesn't publish tagged releases yet; the `main` branch is the release channel. To see what changed, browse the [commit history](https://github.com/arastu/zflash/commits/main) and the [README](https://github.com/arastu/zflash#readme).
+
+## Find your zflash directory
+
+Every shell that has loaded zflash knows where it lives:
+
+```bash
+echo $ZFLASH_SRC
+```
+
+That's `~/.local/share/zflash/zflash` for the one-line install, or the directory you cloned into.
+
+## Upgrade
+
+<Tabs groupId="install-method">
+<TabItem value="curl" label="One-line install" default>
+
+```bash
+git -C "$ZFLASH_SRC" pull --ff-only
+exec zsh
+```
+
+:::warning Re-running the installer does not upgrade
+If zflash is already cloned, `install.sh` uses the existing copy as it is. It never pulls.
+:::
+
+</TabItem>
+<TabItem value="checkout" label="Git checkout">
+
+```bash
+cd ~/Workspace/zflash      # wherever you cloned it
+git pull --ff-only
+exec zsh
+```
+
+</TabItem>
+<TabItem value="submodule" label="Dotfiles submodule">
+
+```bash
+cd ~/dotfiles
+git submodule update --remote zsh/zflash
+git commit -am "Upgrade zflash"
+exec zsh
+```
+
+</TabItem>
+</Tabs>
+
+## What happens after the pull
+
+Nothing else is required:
+
+1. The next shell sources the new `zflash.zsh`.
+2. `zflash boot` sees that `lib/core.zsh` is newer than your init and **rebuilds automatically** with the new manager.
+3. `zflash version` reports the new version.
+
+If you want to rebuild everything from scratch, including the completion dump:
+
+```bash
+zflash reset
+```
+
+## Make upgrading a one-word command
+
+Add to your aliases file:
+
+```bash title="~/.zsh/aliases"
+alias zflash-upgrade='git -C "$ZFLASH_SRC" pull --ff-only && exec zsh'
+```
+
+Or upgrade zflash and all plugins in one go:
+
+```bash
+alias zup='git -C "$ZFLASH_SRC" pull --ff-only && zflash update && exec zsh'
+```
+
+## After upgrading: check the release notes
+
+Skim the [README](https://github.com/arastu/zflash#readme) for:
+
+- new **spec verbs** or options you might want to adopt;
+- new or changed **variables** (see the [variables reference](../reference/variables.md));
+- changes to the recommended spec in [`examples/`](https://github.com/arastu/zflash/tree/main/examples).
+
+Your spec isn't modified by an upgrade. Compare it with `examples/starter.zsh` if you want to pick up new recommendations.
+
+## Roll back
+
+The one-line installer makes a shallow clone, so fetch history first:
+
+```bash
+cd "$ZFLASH_SRC"
+git fetch --unshallow          # only needed once, for shallow clones
+git log --oneline -10          # find the commit you want
+git checkout <commit>
+exec zsh                       # rebuilds with the older manager
+```
+
+Return to the latest version with:
+
+```bash
+git -C "$ZFLASH_SRC" checkout main && git -C "$ZFLASH_SRC" pull --ff-only
+```
+
+If a rollback leaves the shell in a bad state, run `zflash reset`. If zflash itself fails to load, see [Troubleshooting](../guides/troubleshooting.md#recover-a-broken-shell).
+
+## Moving or reinstalling zflash
+
+To move zflash to a different directory, clone it there and update the `source` line in `.zshrc`:
+
+```bash
+git clone https://github.com/arastu/zflash ~/src/zflash
+# in ~/.zshrc:
+source $HOME/src/zflash/zflash.zsh
+```
+
+Your plugins, spec and cache are independent of where zflash lives, so nothing else changes. Delete the old directory afterwards.
