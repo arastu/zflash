@@ -2,7 +2,7 @@
 
 A super blazing fast(est), staged zsh plugin manager.
 
-**Documentation: <https://arastu.github.io/zflash/>**
+**Documentation: <https://zflash.arastu.ir/>**
 
 ![A new shell, prompt and all, in 7 ms](docs/demo.gif)
 
