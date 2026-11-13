@@ -1,34 +1,44 @@
-/* zflash docs theme: amber "flash" accent on a neutral base. */
+/* zflash docs theme: the logo's violet-to-cyan neon on a neutral base. */
 :root {
-  --ifm-color-primary: #b7791f;
-  --ifm-color-primary-dark: #a56d1c;
-  --ifm-color-primary-darker: #9c671a;
-  --ifm-color-primary-darkest: #805516;
-  --ifm-color-primary-light: #c98522;
-  --ifm-color-primary-lighter: #d28b24;
-  --ifm-color-primary-lightest: #dd9b3a;
+  --ifm-color-primary: #7c3aed;
+  --ifm-color-primary-dark: #6d28d9;
+  --ifm-color-primary-darker: #6525cc;
+  --ifm-color-primary-darkest: #531ea8;
+  --ifm-color-primary-light: #8b52f0;
+  --ifm-color-primary-lighter: #9461f1;
+  --ifm-color-primary-lightest: #ad86f5;
   --ifm-code-font-size: 92%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #f5c542;
-  --ifm-color-primary-dark: #f3bc24;
-  --ifm-color-primary-darker: #f2b815;
-  --ifm-color-primary-darkest: #d39d0b;
-  --ifm-color-primary-light: #f7ce60;
-  --ifm-color-primary-lighter: #f8d26f;
-  --ifm-color-primary-lightest: #fadf9b;
+  --ifm-color-primary: #b79cff;
+  --ifm-color-primary-dark: #9f7cff;
+  --ifm-color-primary-darker: #936cff;
+  --ifm-color-primary-darkest: #6f3bff;
+  --ifm-color-primary-light: #cfbcff;
+  --ifm-color-primary-lighter: #dbccff;
+  --ifm-color-primary-lightest: #ffffff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
 .hero--zflash {
-  background: #1f2335;
+  background: #040311;
   color: #e6e8f0;
 }
 
 .hero--zflash .hero__title {
-  color: #f5c542;
+  background: linear-gradient(90deg, #f04dff, #8f6bff 45%, #1ee3ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The primary button sits on the dark hero in both colour modes. */
+.hero--zflash .button--primary {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
 }
 
 /* Tables in docs scroll on narrow screens instead of overflowing. */

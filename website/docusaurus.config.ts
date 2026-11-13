@@ -59,6 +59,8 @@ const config: Config = {
   ],
 
   themeConfig: {
+    // Social card for link previews.
+    image: 'img/social-card.jpg',
     colorMode: {
       respectPrefersColorScheme: true,
     },
@@ -66,7 +68,7 @@ const config: Config = {
       title: 'zflash',
       logo: {
         alt: 'zflash logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.png',
       },
       items: [
         {

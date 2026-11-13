@@ -1,10 +1,22 @@
-# zflash
+<p align="center">
+  <img src="docs/banner.png" alt="zflash: a fast, staged plugin manager for zsh" width="760">
+</p>
 
-A super blazing fast(est), staged zsh plugin manager.
+<p align="center">
+  <b>A super blazing fast(est), staged zsh plugin manager.</b>
+</p>
 
-**Documentation: <https://zflash.arastu.ir/>**
+<p align="center">
+  <a href="https://zflash.arastu.ir/"><b>Documentation</b></a> ·
+  <a href="#install">Install</a> ·
+  <a href="#the-spec-file">The spec file</a> ·
+  <a href="#benchmark">Benchmark</a> ·
+  <a href="#migrating-from-other-tools">Migrating</a>
+</p>
 
-![A new shell, prompt and all, in 7 ms](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo.gif" alt="A new shell, prompt and all, in 7 ms" width="760">
+</p>
 
 zflash compiles a short declarative spec into one static, byte-compiled init
 file. At shell start nothing is resolved, searched, forked or parsed by the
@@ -12,6 +24,19 @@ manager: your `.zshrc` sources a tiny bootstrap and that one file. Everything
 in the spec, plugins, `<tool> init zsh` output and your own rc files, is split
 into two stages, before and after the first prompt, so the prompt appears as
 early as possible. compinit itself runs after the prompt.
+
+## Contents
+
+- [Why another one](#why-another-one)
+- [Install](#install)
+- [The spec file](#the-spec-file)
+- [Commands](#commands)
+- [Startup time](#startup-time)
+- [Benchmark](#benchmark)
+- [How startup works](#how-startup-works)
+- [Variables](#variables)
+- [Migrating from other tools](#migrating-from-other-tools)
+- [License](#license)
 
 ## Why another one
 
@@ -24,90 +49,6 @@ early as possible. compinit itself runs after the prompt.
 | `starship init zsh`, `zoxide init zsh`, `fzf --zsh` | forked on every start | run once at build time, output inlined (`zflash eval`) |
 | your aliases, functions, exports | parsed on every start | listed in the spec: byte-compiled, staged like plugins |
 | updates | at startup, in the foreground | in the background, after the prompt |
-
-## Startup time
-
-Same machine, same plugins (oh-my-zsh's lib, fzf-tab, zsh-completions, 39
-oh-my-zsh and third-party plugins, 2 completion-only, starship, zoxide, direnv,
-fzf), measured with `hyperfine -N 'zsh -i -c exit'` in Ghostty on an Apple
-Silicon Mac, zsh 5.9. `zsh -f`, which reads no rc files at all, takes 2.2 ms.
-
-| setup | startup |
-|---|---|
-| zgenom, the config I used before (everything loaded at startup) | 129 ms |
-| zflash 0.1, plugins staged, the rest of `.zshrc` as it was | 32 ms |
-| zflash 0.2, the whole `.zshrc` staged | **7 ms** |
-
-What the last step changed, in order of effect:
-
-- `starship init zsh` forks `starship prompt --continuation` on every start
-  (4 ms); `zflash eval` captures the init once at build time.
-- fzf-tab, the oh-my-zsh base library, zoxide, direnv and fzf are deferred
-  past the first prompt, together with aliases and functions. compinit too.
-- `~/.zshenv` sets `NO_GLOBAL_RCS`: macOS's `/etc/zshrc` forks `locale` and
-  `/etc/zprofile` forks `path_helper` (3 ms). See
-  [`examples/zshenv.zsh`](examples/zshenv.zsh).
-- Every file zflash sources is byte-compiled, including plugin helper files
-  and your own rc files.
-
-The full config is in [`examples/`](examples/): [`plugins.zsh`](examples/plugins.zsh)
-is the spec, [`zshrc.zsh`](examples/zshrc.zsh) the whole `.zshrc`.
-
-## Benchmark
-
-Six plugins (`zsh-completions`, `zsh-autosuggestions`, `zsh-syntax-highlighting`,
-`zsh-history-substring-search`, oh-my-zsh `git` and `extract`) loaded through
-seven setups, each using the manager's documented minimal configuration with
-compinit where the manager's docs put it. Every shell runs with the same
-scrubbed environment and its own `ZDOTDIR` and `HOME`. Each setup is first
-checked, in a real pseudo-terminal, to have loaded all six plugins and
-initialised completions; only then is it timed.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="bench/chart-dark.svg">
-  <img alt="Startup time by plugin manager" src="bench/chart.svg">
-</picture>
-
-| setup | mean | min |
-|---|---:|---:|
-| zsh -f (no rc files at all) | 2.8 ms ± 0.1 | 2.7 ms |
-| zflash, widgets deferred | 15.9 ms ± 0.4 | 15.3 ms |
-| zflash | 24.5 ms ± 0.6 | 23.6 ms |
-| zgenom | 28.5 ms ± 0.6 | 27.5 ms |
-| znap | 33.1 ms ± 0.5 | 32.2 ms |
-| no manager (hand-written) | 39.2 ms ± 0.5 | 38.2 ms |
-| antidote | 40.7 ms ± 0.7 | 39.5 ms |
-| zinit, turbo mode for widgets | 45.1 ms ± 0.5 | 44.3 ms |
-| sheldon | 49.1 ms ± 0.7 | 47.9 ms |
-| zinit | 62.0 ms ± 0.6 | 60.6 ms |
-
-Apple M4, macOS 27.0.1, zsh 5.9 (arm64-apple-darwin26.0), 2026-10-16. hyperfine, 10 setups, `zsh -i -c exit`.
-
-Notes:
-
-- *Deferred* rows load the three widget plugins (highlighting, autosuggestions,
-  history search) after the first prompt: `zflash defer` and zinit's
-  `wait lucid`. The zflash row also runs compinit after the prompt, its
-  default whenever something is deferred. The other rows load everything
-  before the prompt.
-- zflash's lead over the hand-written setup comes from its cached compinit and
-  byte-compiled files. The hand-written setup uses a plain `compinit` as most
-  dotfiles do; with `compinit -C` it measures about 38 ms.
-- zgenom uses `zgenom compdef`, antidote two bundle files with compinit between
-  them, and sheldon an inline compinit plugin, because the oh-my-zsh git plugin
-  calls `compdef` when sourced. zinit uses `zinit cdreplay`; znap runs compinit
-  itself.
-- Everything was cloned from local mirrors during setup; this has no effect on
-  startup time.
-
-Reproduce with:
-
-```sh
-zsh bench/run.zsh                       # needs git, hyperfine, python3; sheldon optional
-ZBENCH_RUNS=50 zsh bench/run.zsh        # more runs
-```
-
-It writes `bench/results.json`, `bench/results.md` and the two charts.
 
 ## Install
 
@@ -208,7 +149,7 @@ second compinit and an update prompt of its own. Set `ZSH_CACHE_DIR` before
 
 ## Commands
 
-```
+```text
 zflash build          regenerate the init from the spec
 zflash update [repo]  git pull every repository (or the ones named), then build
 zflash list           what the current init loads, by stage
@@ -219,6 +160,90 @@ zflash bench [runs]   time `zsh -i` startup
 
 `zflash boot` rebuilds on its own whenever the spec, or zflash itself, is newer
 than the generated init.
+
+## Startup time
+
+Same machine, same plugins (oh-my-zsh's lib, fzf-tab, zsh-completions, 39
+oh-my-zsh and third-party plugins, 2 completion-only, starship, zoxide, direnv,
+fzf), measured with `hyperfine -N 'zsh -i -c exit'` in Ghostty on an Apple
+Silicon Mac, zsh 5.9. `zsh -f`, which reads no rc files at all, takes 2.2 ms.
+
+| setup | startup |
+|---|---|
+| zgenom, the config I used before (everything loaded at startup) | 129 ms |
+| zflash 0.1, plugins staged, the rest of `.zshrc` as it was | 32 ms |
+| zflash 0.2, the whole `.zshrc` staged | **7 ms** |
+
+What the last step changed, in order of effect:
+
+- `starship init zsh` forks `starship prompt --continuation` on every start
+  (4 ms); `zflash eval` captures the init once at build time.
+- fzf-tab, the oh-my-zsh base library, zoxide, direnv and fzf are deferred
+  past the first prompt, together with aliases and functions. compinit too.
+- `~/.zshenv` sets `NO_GLOBAL_RCS`: macOS's `/etc/zshrc` forks `locale` and
+  `/etc/zprofile` forks `path_helper` (3 ms). See
+  [`examples/zshenv.zsh`](examples/zshenv.zsh).
+- Every file zflash sources is byte-compiled, including plugin helper files
+  and your own rc files.
+
+The full config is in [`examples/`](examples/): [`plugins.zsh`](examples/plugins.zsh)
+is the spec, [`zshrc.zsh`](examples/zshrc.zsh) the whole `.zshrc`.
+
+## Benchmark
+
+Six plugins (`zsh-completions`, `zsh-autosuggestions`, `zsh-syntax-highlighting`,
+`zsh-history-substring-search`, oh-my-zsh `git` and `extract`) loaded through
+seven setups, each using the manager's documented minimal configuration with
+compinit where the manager's docs put it. Every shell runs with the same
+scrubbed environment and its own `ZDOTDIR` and `HOME`. Each setup is first
+checked, in a real pseudo-terminal, to have loaded all six plugins and
+initialised completions; only then is it timed.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="bench/chart-dark.svg">
+  <img alt="Startup time by plugin manager" src="bench/chart.svg">
+</picture>
+
+| setup | mean | min |
+|---|---:|---:|
+| zsh -f (no rc files at all) | 2.8 ms ± 0.1 | 2.7 ms |
+| zflash, widgets deferred | 15.9 ms ± 0.4 | 15.3 ms |
+| zflash | 24.5 ms ± 0.6 | 23.6 ms |
+| zgenom | 28.5 ms ± 0.6 | 27.5 ms |
+| znap | 33.1 ms ± 0.5 | 32.2 ms |
+| no manager (hand-written) | 39.2 ms ± 0.5 | 38.2 ms |
+| antidote | 40.7 ms ± 0.7 | 39.5 ms |
+| zinit, turbo mode for widgets | 45.1 ms ± 0.5 | 44.3 ms |
+| sheldon | 49.1 ms ± 0.7 | 47.9 ms |
+| zinit | 62.0 ms ± 0.6 | 60.6 ms |
+
+Apple M4, macOS 27.0.1, zsh 5.9 (arm64-apple-darwin26.0), 2026-10-16. hyperfine, 10 setups, `zsh -i -c exit`.
+
+Notes:
+
+- *Deferred* rows load the three widget plugins (highlighting, autosuggestions,
+  history search) after the first prompt: `zflash defer` and zinit's
+  `wait lucid`. The zflash row also runs compinit after the prompt, its
+  default whenever something is deferred. The other rows load everything
+  before the prompt.
+- zflash's lead over the hand-written setup comes from its cached compinit and
+  byte-compiled files. The hand-written setup uses a plain `compinit` as most
+  dotfiles do; with `compinit -C` it measures about 38 ms.
+- zgenom uses `zgenom compdef`, antidote two bundle files with compinit between
+  them, and sheldon an inline compinit plugin, because the oh-my-zsh git plugin
+  calls `compdef` when sourced. zinit uses `zinit cdreplay`; znap runs compinit
+  itself.
+- Everything was cloned from local mirrors during setup; this has no effect on
+  startup time.
+
+Reproduce with:
+
+```sh
+zsh bench/run.zsh                       # needs git, hyperfine, python3; sheldon optional
+ZBENCH_RUNS=50 zsh bench/run.zsh        # more runs
+```
+
+It writes `bench/results.json`, `bench/results.md` and the two charts.
 
 ## How startup works
 
@@ -304,6 +329,9 @@ are `fpath`.
 Paste the prompt below into an AI coding assistant that can read and edit your
 files. It walks through the whole migration and verifies the result.
 
+<details>
+<summary><b>Show the prompt</b></summary>
+
 ```text
 Migrate my zsh plugin setup to zflash (https://github.com/arastu/zflash), a
 staged plugin manager that compiles a declarative spec into one byte-compiled
@@ -387,6 +415,8 @@ init file. Work step by step and show me each file before you write it.
    backup is, and what old files (the previous manager's directory, old
    compdump files) can now be deleted. Do not delete them yourself.
 ```
+
+</details>
 
 ## License
 

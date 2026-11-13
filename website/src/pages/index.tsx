@@ -60,6 +60,13 @@ function Hero() {
   return (
     <header className={clsx('hero hero--zflash', styles.heroBanner)}>
       <div className="container">
+        <img
+          className={styles.heroLogo}
+          src={useBaseUrl('/img/logo.png')}
+          alt=""
+          width={144}
+          height={144}
+        />
         <Heading as="h1" className="hero__title">
           {siteConfig.title}
         </Heading>

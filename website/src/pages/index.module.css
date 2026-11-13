@@ -3,6 +3,11 @@
   text-align: center;
 }
 
+.heroLogo {
+  display: block;
+  margin: 0 auto 1rem;
+}
+
 .heroNote {
   opacity: 0.8;
 }
