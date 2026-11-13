@@ -2,6 +2,8 @@
 
 A super blazing fast(est), staged zsh plugin manager.
 
+**Documentation: <https://arastu.github.io/zflash/>**
+
 ![A new shell, prompt and all, in 7 ms](docs/demo.gif)
 
 zflash compiles a short declarative spec into one static, byte-compiled init
