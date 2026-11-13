@@ -375,8 +375,8 @@ init file. Work step by step and show me each file before you write it.
    - Nothing in the deferred stage fails silently: zsh-defer hides stderr, so
      once run the stage synchronously (replace the `source …/zsh-defer.plugin.zsh`
      line in a copy of ~/.cache/zflash/init.zsh with
-     `zsh-defer() { [[ $1 == -c ]] && eval "$2" || "$@" }`, source the copy in
-     `zsh -i -c` and read the errors).
+     `zsh-defer() { while [[ $1 == -* && $1 != -c ]]; do shift; done; if [[ $1 == -c ]]; then eval "$2"; else "$@"; fi }`,
+     source the copy in `zsh -i -c` and read the errors).
    - The compdump is stable: run `zsh -lic exit` and `zsh -ic exit`
      alternately and confirm the dump's mtime does not change.
    - `zflash list` shows every plugin from step 1 in the intended stage.
