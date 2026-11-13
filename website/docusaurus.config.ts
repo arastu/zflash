@@ -13,7 +13,7 @@ function withSlashes(path: string): string {
 const config: Config = {
   title: 'zflash',
   tagline: 'A super blazing fast, staged zsh plugin manager',
-  favicon: 'img/favicon.ico',
+  favicon: 'favicon.ico',
 
   future: {
     v4: true,
