@@ -5,7 +5,7 @@ title: Updating Plugins
 
 zflash keeps your plugins current in the background, and you can update on demand at any time.
 
-:::warning `zflash update` updates plugins, not zflash
+:::warning[`zflash update` updates plugins, not zflash]
 `zflash update` pulls the repositories in `$ZFLASH_HOME/repos`. zflash itself lives elsewhere and is upgraded separately. See [Upgrading zflash](upgrading-zflash.mdx).
 :::
 

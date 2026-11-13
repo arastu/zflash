@@ -68,7 +68,7 @@ Use `--defer` unless the integration must be in place before the prompt is drawn
 
 ## Keeping integrations current
 
-:::warning Rebuild after upgrading a tool
+:::warning[Rebuild after upgrading a tool]
 The output is frozen at build time. After upgrading starship, zoxide, fzf or any other tool used with `zflash eval`, run:
 
 ```bash

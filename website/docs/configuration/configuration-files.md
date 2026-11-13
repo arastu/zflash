@@ -69,7 +69,7 @@ Files such as `~/.zsh/exports` or `~/.zsh/aliases` that you list in the spec. Th
 
 One shallow git clone per repository, laid out as `<owner>/<repo>`. zflash clones a repo the first time a build sees it, `zflash update` pulls them, and `zflash clean` removes the ones no longer in your spec.
 
-:::warning Don't edit plugin clones
+:::warning[Don't edit plugin clones]
 Updates use `git pull --ff-only`. Local changes inside a clone make that repo's update fail as soon as upstream touches the same files, and are lost if the clone is ever re-created. To customize a plugin, fork it and point your spec at the fork, or copy the file and load it as [your own file](../plugins/your-own-files.md).
 :::
 

@@ -34,7 +34,7 @@ A practical layout:
 
 After the split, `~/.zshrc` contains just the two bootstrap lines (plus any variables zflash reads).
 
-:::tip Where to keep them
+:::tip[Where to keep them]
 Your rc files can live anywhere, including next to the spec in a dotfiles repo. Use absolute or `~` paths in the spec.
 :::
 

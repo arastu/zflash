@@ -115,7 +115,7 @@ zflash defer ohmyzsh/ohmyzsh \
   plugins/docker plugins/kubectl
 ```
 
-:::warning Conditions are evaluated at build time
+:::warning[Conditions are evaluated at build time]
 If you install `zoxide` after the last build, the condition above stays false until the next build. Run `zflash build` after installing or removing tools.
 :::
 

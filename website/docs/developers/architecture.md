@@ -125,7 +125,7 @@ With `ZFLASH_COMPINIT=sync`, this block is replaced by an inline cached compinit
 PROMPT=%~ %# 
 ```
 
-:::caution Eval output is inlined verbatim
+:::caution[Eval output is inlined verbatim]
 The snippet above is from a deliberately naive spec line, and the output it inlines is not valid zsh: `%#` would run as a command. zflash doesn't validate or quote `eval` output; it must be a valid zsh script, as `<tool> init zsh` output is. Use `${(q+)…}` when you build assignments yourself, as the starship `PROMPT2` recipe does.
 :::
 

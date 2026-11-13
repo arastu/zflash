@@ -9,7 +9,7 @@ zflash is a fast, **staged** plugin manager for zsh. You describe everything you
 
 Everything in the spec (plugins, `<tool> init zsh` output, your own rc files) is split into two stages, **before** and **after** the first prompt, so the prompt appears as early as possible.
 
-:::info Version
+:::info[Version]
 These docs describe **zflash 0.2.0**. Run `zflash version` to see which version you have. See [Upgrading zflash](../maintaining/upgrading-zflash.mdx) to get the latest.
 :::
 

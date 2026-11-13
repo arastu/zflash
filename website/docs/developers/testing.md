@@ -3,7 +3,7 @@ id: testing
 title: Testing Changes
 ---
 
-:::note No automated test suite yet
+:::note[No automated test suite yet]
 As of 0.2.0 zflash has no unit tests and no CI. Changes are verified by hand and by the sanity check built into the [benchmark](benchmarking.md). A small automated suite would be a welcome contribution; see [ideas](#ideas-for-an-automated-suite) below.
 :::
 

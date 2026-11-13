@@ -12,7 +12,7 @@ This section is for people who work **on** zflash rather than **with** it:
 
 If you only want to install and use zflash, start with [Getting Started](../getting-started/introduction.md) instead.
 
-:::info Version
+:::info[Version]
 This guide describes the code of **zflash 0.2.0** (`main` at `22554e4`). zflash is young and small; when this guide and the code disagree, the code wins. Please [open an issue](https://github.com/arastu/zflash/issues) or fix the page.
 :::
 
