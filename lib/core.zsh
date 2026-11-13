@@ -467,19 +467,20 @@ zflash::update() {  # [--quiet] [repo...]
 
 zflash::list() {
   [[ -r $ZFLASH_MANIFEST ]] || { zflash::err "nothing built yet; run 'zflash build'"; return 1 }
-  local stage path
-  while IFS=$'\t' read -r stage path; do
+  local stage item
+  while IFS=$'\t' read -r stage item; do
     [[ $stage == repo ]] && continue
-    path=${path#$ZFLASH_REPOS/}
-    print -r -- "${(r:6:)stage} ${path/#$HOME/~}"
+    item=${item#$ZFLASH_REPOS/}
+    print -r -- "${(r:6:)stage} ${item/#$HOME/~}"
   done < "$ZFLASH_MANIFEST"
 }
 
 zflash::clean() {  # [--yes]
-  local stage path d
+  # Not `path`: that is the array tied to PATH, and a local one hides rm.
+  local stage dir d
   local -a used unused
-  [[ -r $ZFLASH_MANIFEST ]] && while IFS=$'\t' read -r stage path; do
-    [[ $stage == repo ]] && used+=($path)
+  [[ -r $ZFLASH_MANIFEST ]] && while IFS=$'\t' read -r stage dir; do
+    [[ $stage == repo ]] && used+=($dir)
   done < "$ZFLASH_MANIFEST"
   for d in $ZFLASH_REPOS/*/*(N/); do (( ${used[(Ie)$d]} )) || unused+=($d); done
   (( $#unused )) || { zflash::log "nothing to clean"; return 0 }
@@ -488,7 +489,7 @@ zflash::clean() {  # [--yes]
     read -q "?remove them? [y/N] " || { print; return 0 }
     print
   fi
-  command rm -rf -- $unused
+  command rm -rf -- $unused || { zflash::err "could not remove the unused repositories"; return 1 }
   command rmdir -- $ZFLASH_REPOS/*(N/^F) 2>/dev/null
   zflash::log "removed $#unused repositor$( (( $#unused == 1 )) && print -n y || print -n ies)"
 }
