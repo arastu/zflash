@@ -1,0 +1,41 @@
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.heroNote {
+  opacity: 0.8;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.install {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.section {
+  padding: 3rem 0;
+}
+
+.alt {
+  background: var(--ifm-color-emphasis-100);
+}
+
+.feature {
+  margin-bottom: 1.5rem;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem 1rem;
+  }
+}

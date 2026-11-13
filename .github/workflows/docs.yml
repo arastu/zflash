@@ -1,0 +1,87 @@
+# Builds the documentation website in website/ on every pull request that
+# touches it, and deploys it to GitHub Pages on pushes to main.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source:
+# "GitHub Actions". Until then the deploy job fails; pull request builds work
+# regardless.
+name: Docs website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'bench/chart.svg'
+      - 'bench/chart-dark.svg'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'website/**'
+      - 'bench/chart.svg'
+      - 'bench/chart-dark.svg'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Pull requests: cancel superseded builds. Deploys: one at a time, never
+# cancelled midway.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('docs-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DEPLOY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: website/package.json
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run typecheck
+
+      # Provides the site's origin and base path (e.g. /zflash, or empty for
+      # a custom domain).
+      - id: pages
+        if: env.DEPLOY == 'true'
+        uses: actions/configure-pages@v6
+
+      # Fails on broken links and anchors (onBrokenLinks: 'throw').
+      - run: bun run build
+        env:
+          SITE_URL: ${{ steps.pages.outputs.origin }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - if: env.DEPLOY == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/build
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
