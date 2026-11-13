@@ -50,7 +50,7 @@ zflash::detect() {  # <dir> <name>  →  REPLY=<plugin file>  (empty when none i
 ## Pitfall: special parameter names
 
 :::danger Don't name a local after a special parameter
-zsh ties several lowercase names to special parameters. `local path` gives the function an **empty `PATH`**; this is exactly why `zflash clean` couldn't find `rm` in 0.2.0 ([#1](https://github.com/arastu/zflash/issues/1)).
+zsh ties several lowercase names to special parameters. `local path` gives the function an **empty `PATH`**; this is exactly how `zflash clean` once lost `rm` ([#1](https://github.com/arastu/zflash/issues/1)).
 :::
 
 Avoid these as variable names: `path`, `fpath`, `cdpath`, `manpath`, `module_path`, `status`, `pipestatus`, `options`, `functions`, `commands`, `aliases`, `parameters`, `argv`, `prompt`, `psvar`, `signals`, `history`, `match`, `mbegin`, `mend`. Use `p`, `dir`, `file`, `rc` and so on instead.

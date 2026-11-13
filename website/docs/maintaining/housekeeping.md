@@ -14,7 +14,7 @@ A few commands keep a long-lived zflash setup tidy and fast.
 | You upgraded a tool used by `zflash eval` (starship, zoxide, fzf…) | `zflash build` |
 | You installed a tool referenced by a condition in the spec | `zflash build` |
 | You installed software that adds completion files (`brew install …`) | Nothing (picked up within 24 h), or `zflash reset` for immediate effect |
-| You removed plugins from the spec | `zflash clean` (see the [known issue](#zflash-clean)) |
+| You removed plugins from the spec | `zflash clean` |
 | Every so often | `zflash update`, then check `zflash bench` |
 | Every so often | Upgrade zflash: `git -C "$ZFLASH_SRC" pull` ([details](upgrading-zflash.mdx)) |
 | Something seems off | `zflash reset` |
@@ -46,14 +46,6 @@ zflash clean --yes    # no prompt
 ```
 
 It compares `$ZFLASH_HOME/repos` with the repositories in the **last build**. Make sure the build is current (open a new shell or run `zflash build`) first.
-
-:::warning Known issue in zflash 0.2.0
-`zflash clean` lists the unused repositories and reports them as removed, but **doesn't delete them**: it fails with `command not found: rm`. (The function declares a local variable named `path`, which zsh ties to `PATH`.) Until this is fixed upstream ([arastu/zflash#1](https://github.com/arastu/zflash/issues/1)), delete unused clones by hand:
-
-```bash
-rm -rf ~/.local/share/zflash/repos/<owner>/<repo>
-```
-:::
 
 ## `zflash reset`
 

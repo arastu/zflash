@@ -90,14 +90,6 @@ remove them? [y/N]
 
 `zflash clean --yes` skips the prompt. `clean` compares `$ZFLASH_HOME/repos` against the repositories in the **last build**, so open a new shell or run `zflash build` before cleaning.
 
-:::warning Known issue in zflash 0.2.0
-`zflash clean` lists the unused repositories and reports them as removed, but **doesn't delete them**: it fails with `command not found: rm`. (The function declares a local variable named `path`, which zsh ties to `PATH`.) Until this is fixed upstream ([arastu/zflash#1](https://github.com/arastu/zflash/issues/1)), delete unused clones by hand:
-
-```bash
-rm -rf ~/.local/share/zflash/repos/<owner>/<repo>
-```
-:::
-
 ## Temporarily disable a plugin
 
 Comment out the line. The clone stays on disk, so re-enabling is instant:

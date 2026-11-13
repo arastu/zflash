@@ -57,10 +57,6 @@ zflash clean [--yes]
 
 Lists repositories in `$ZFLASH_HOME/repos` that the last build didn't use, and deletes them after confirmation. `--yes` (`-y`) skips the prompt.
 
-:::warning Known issue in 0.2.0
-The deletion step fails (`command not found: rm`) even though `clean` reports success. Delete the listed directories by hand. Tracked in [arastu/zflash#1](https://github.com/arastu/zflash/issues/1). See [Housekeeping](../maintaining/housekeeping.md#zflash-clean).
-:::
-
 ## `zflash reset`
 
 ```bash
